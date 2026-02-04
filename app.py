@@ -1,17 +1,15 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="Sprint Dashboard", layout="wide")
+# Tiêu đề app
+st.title("Sprint Backlog Analyzer") [cite: 1]
 
-st.title("📊 Sprint Backlog Analyzer (Secure Mode)")
+# Kết nối (Sẽ tự động tìm thông tin trong [connections.gsheets])
+conn = st.connection("gsheets", type=GSheetsConnection) [cite: 5, 14]
 
-# Kết nối an toàn qua Secrets
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# Đọc dữ liệu (Dán link trình duyệt của file Sheet vào đây)
-# Lưu ý: Chỉ cần link bình thường, không cần Publish to web
-url = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
-
+# Đọc dữ liệu
+df = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592")
+st.write(df)
 try:
     df = conn.read(spreadsheet=url)
     
