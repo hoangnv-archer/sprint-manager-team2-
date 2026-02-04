@@ -10,7 +10,7 @@ st.set_page_config(page_title="Sprint Dashboard Pro", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Link Sheet của bạn
-URL = "DÁN_LINK_GOOGLE_SHEET_CỦA_BẠN_VÀO_ĐÂY"
+URL = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
     # 1. Đọc dữ liệu thô để tìm hàng tiêu đề thực sự
