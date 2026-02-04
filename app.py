@@ -10,7 +10,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Đọc dữ liệu (Dán link trình duyệt của file Sheet vào đây)
 # Lưu ý: Chỉ cần link bình thường, không cần Publish to web
-url = "https://docs.google.com/spreadsheets/d/ID_FILE_CỦA_BẠN/edit"
+url = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
     df = conn.read(spreadsheet=url)
