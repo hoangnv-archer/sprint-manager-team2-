@@ -78,18 +78,6 @@ try:
         st.divider()
 
         # --- BIỂU ĐỒ PHÂN TÍCH ---
-        Để cập nhật giá trị Real-time (thời gian thực tế làm việc) vào biểu đồ so sánh với phần Dự kiến đang chờ (None), chúng ta cần gộp 3 chỉ số vào cùng một biểu đồ:
-
-Thực tế đã làm (Real): Số giờ thực tế đã nhập.
-
-Dự kiến đang chờ (None): Số giờ Estimate của các task có State trống.
-
-Tổng dự tính (Estimate): Để đối chiếu xem thực tế đang chiếm bao nhiêu phần của kế hoạch.
-
-Dưới đây là đoạn code đã được cập nhật lại logic xử lý dữ liệu (Melt) và cấu hình biểu đồ để hiển thị giá trị thời gian thực:
-
-Python
-
         st.subheader("📊 Biểu đồ so sánh: Real-time vs Tồn đọng (None)")
         
         # 1. Chuẩn bị dữ liệu: Lấy Real, Estimate và Pending_Est
