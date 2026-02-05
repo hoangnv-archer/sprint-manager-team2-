@@ -37,7 +37,7 @@ try:
 
         # 3. Lọc dữ liệu: Chỉ lấy dòng có PIC và bỏ qua dòng 'Summary' (hàng ngay dưới header)
         # Chúng ta lọc bỏ dòng có chứa tổng số 185.5 bằng cách kiểm tra PIC hợp lệ
-        valid_pics = ['Tài', 'Dương', 'QA', 'Quân'] # Bạn có thể thêm tên team vào đây
+        valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú'] # Bạn có thể thêm tên team vào đây
         df_clean = df[df['PIC'].isin(valid_pics)].copy()
 
         # 4. Giao diện Dashboard
