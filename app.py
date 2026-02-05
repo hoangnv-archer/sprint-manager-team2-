@@ -70,22 +70,21 @@ try:
 
     
         # 7. Đánh giá nhanh hay chậm
-        st.subheader("🔍 Đánh giá chi tiết cá nhân")
-        if not v_df.empty:
+        st.subheader("📊 Tổng hợp năng suất")
+            st.dataframe(v_df, use_container_width=True)
+
+            st.subheader("🔍 Đánh giá cá nhân")
             cols = st.columns(len(v_df))
             for idx, row in v_df.iterrows():
                 with cols[idx]:
                     st.write(f"**{row['PIC']}**")
-                    est = row['Estimate Dev']
-                    real = row['Real']
-                    
-                    if real > est:
-                        st.error(f"⚠️ Chậm {real-est:.1f}h")
-                    elif real < est and real > 0:
-                        st.success(f"⚡ Nhanh {est-real:.1f}h")
+                    diff = row['Estimate Dev'] - row['Real']
+                    if diff < 0:
+                        st.error(f"⚠️ Chậm {abs(diff):.1f}h")
+                    elif diff > 0:
+                        st.success(f"⚡ Nhanh {diff:.1f}h")
                     else:
                         st.info("✅ Đúng hạn")
-                        
                     st.metric("Hiệu suất", f"{row['Hiệu suất (%)']}%")
                 
 
