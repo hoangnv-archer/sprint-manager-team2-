@@ -78,48 +78,49 @@ try:
         st.divider()
 
         # --- BIỂU ĐỒ PHÂN TÍCH ---
+        # --- PHẦN XỬ LÝ DỮ LIỆU BIỂU ĐỒ ---
         st.subheader("📊 Biểu đồ so sánh: Real-time vs Tồn đọng (None)")
+
+        # Tạo DataFrame tạm để vẽ biểu đồ, đảm bảo các cột tồn tại
+        chart_data = pic_stats[['PIC', 'Active_Real', 'Total_Estimate', 'Pending_Est']].copy()
         
-        # 1. Chuẩn bị dữ liệu: Lấy Real, Estimate và Pending_Est
-        # Giả sử pic_stats của bạn đã có các cột: PIC, Active_Real, Total_Estimate, Pending_Est
-        fig_df = pic_stats.melt(
+        # Đổi tên cột để hiển thị trên biểu đồ cho đẹp
+        chart_data.columns = ['PIC', 'Thực tế (Real-time)', 'Tổng dự tính (Kế hoạch)', 'Dự kiến đang chờ (None)']
+
+        # Chuyển đổi dữ liệu sang dạng dọc (Melt)
+        fig_df = chart_data.melt(
             id_vars='PIC', 
-            value_vars=['Active_Real', 'Total_Estimate', 'Pending_Est'], 
             var_name='Trạng thái', 
             value_name='Số giờ'
         )
-        
-        # 2. Đổi tên nhãn hiển thị cho trực quan
-        name_map = {
-            'Active_Real': 'Thực tế (Real-time)', 
-            'Total_Estimate': 'Tổng dự tính (Kế hoạch)',
-            'Pending_Est': 'Dự kiến đang chờ (None)'
-        }
-        fig_df['Trạng thái'] = fig_df['Trạng thái'].replace(name_map)
-        
-        # 3. Vẽ biểu đồ cột nhóm (Grouped Bar) để so sánh trực diện Real-time với Kế hoạch
-        fig = px.bar(
-            fig_df, 
-            x='PIC', 
-            y='Số giờ', 
-            color='Trạng thái', 
-            barmode='group', # Chuyển sang group để so sánh realtime với kế hoạch dễ hơn
-            text_auto='.1f', # Hiển thị giá trị số giờ trên đầu cột
-            title="Phân tích khối lượng công việc Real-time",
-            color_discrete_map={
-                'Thực tế (Real-time)': '#00C853',      # Xanh lá (Hoàn thành)
-                'Tổng dự tính (Kế hoạch)': '#636EFA', # Xanh dương (Tổng)
-                'Dự kiến đang chờ (None)': '#FFD600'  # Vàng (Tồn đọng)
-            }
-        )
-        
-        # Tùy chỉnh thêm để biểu đồ chuyên nghiệp hơn
-        fig.update_layout(
-            xaxis_title="Thành viên Team",
-            yaxis_title="Số giờ (h)",
-            legend_title="Chỉ số",
-            hovermode="x unified"
-        )
+
+        # Kiểm tra nếu có dữ liệu thì mới vẽ
+        if not fig_df.empty:
+            fig = px.bar(
+                fig_df, 
+                x='PIC', 
+                y='Số giờ', 
+                color='Trạng thái', 
+                barmode='group', # Hiển thị các cột nằm cạnh nhau
+                text_auto='.1f', # Hiện số giờ trên đầu cột
+                color_discrete_map={
+                    'Thực tế (Real-time)': '#00C853',      # Xanh lá
+                    'Tổng dự tính (Kế hoạch)': '#636EFA', # Xanh dương
+                    'Dự kiến đang chờ (None)': '#FFD600'  # Vàng
+                }
+            )
+
+            fig.update_layout(
+                xaxis_title="Thành viên Team",
+                yaxis_title="Số giờ (h)",
+                legend_title="Chỉ số",
+                margin=dict(l=20, r=20, t=50, b=20),
+                height=500
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("⚠️ Không có dữ liệu để hiển thị biểu đồ.")
 
         # 4. Bảng chi tiết (Highlight các task None)
         st.subheader("📋 Danh sách Task chi tiết")
