@@ -4,40 +4,36 @@ import os
 import gspread
 import json
 
+# Cấu hình ID Discord (Thay thế số ID thực tế của bạn vào đây)
+DISCORD_TAGS = {
+    'TEAM_ROLE': '<@&1387617307190366329>' # ID của nhóm/role
+}
+
 WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK")
 SHEET_URL = os.environ.get("GSHEETS_URL")
 SERVICE_ACCOUNT_JSON = os.environ.get("GCP_SERVICE_ACCOUNT")
 
-discord_ids = {
-    # Nếu muốn tag một nhóm (Role) cho những người còn lại:
-    'TEAM_ROLE': '<@1387617307190366329>'}
 def get_report():
     try:
-        # 1. Xác thực
+        # 1. Xác thực và lấy dữ liệu
         creds_dict = json.loads(SERVICE_ACCOUNT_JSON)
         gc = gspread.service_account_from_dict(creds_dict)
-        
-        # 2. Mở Sheet
         sh = gc.open_by_url(SHEET_URL)
         worksheet = sh.get_worksheet(0)
         data = worksheet.get_all_values()
         
-        # 3. Chuyển thành DataFrame
+        # 2. Xử lý DataFrame
         df_full = pd.DataFrame(data)
         header_idx = df_full[df_full.eq("Userstory/Todo").any(axis=1)].index[0]
         df = pd.DataFrame(data[header_idx + 1:], columns=data[header_idx])
         
-        # 4. CHUẨN HÓA DỮ LIỆU (QUAN TRỌNG)
         df.columns = [str(c).strip() for c in df.columns]
-        
-        # Chuyển State về chữ thường, xóa khoảng trắng, nếu trống thì ghi là 'none'
-        df['State_Clean'] = df['State'].str.strip().str.lower()
-        df['State_Clean'] = df['State_Clean'].replace(['', None], 'none')
+        df['State_Clean'] = df['State'].str.strip().str.lower().replace(['', None], 'none')
         
         valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú', 'Thịnh', 'Đô', 'Tùng', 'Anim', 'Thắng VFX']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
-        # 5. TÍNH TOÁN CHI TIẾT
+        # 3. Tính toán
         pic_stats = df_team.groupby('PIC').agg(
             total=('Userstory/Todo', 'count'),
             done=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
@@ -45,29 +41,30 @@ def get_report():
             none=('State_Clean', lambda x: (x == 'none').sum())
         ).reset_index()
 
-        # 6. SOẠN TIN NHẮN (Bổ sung phần 'Chưa làm')
-       msg = "🔔 **SÁNG NAY CÓ GÌ?** " + discord_ids.get('TEAM_ROLE', '@everyone') + "\n"
-    msg += "━━━━━━━━━━━━━━━━━━━━━\n"
-    
-    for _, r in pic_stats.iterrows():
-        # Lấy tag theo tên PIC, nếu không có thì dùng tên thường
-        mention = discord_ids.get(r['PIC'], r['PIC'])
+        # 4. Soạn tin nhắn có TAG
+        # Tag cả nhóm ở đầu tin nhắn
+        msg = f"🔔 **SÁNG NAY CÓ GÌ?** {DISCORD_TAGS.get('TEAM_ROLE')}\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━━\n"
         
-        p = (r['done'] / int(r['total']) * 100) if int(r['total']) > 0 else 0
-        icon = "🟢" if p >= 80 else "🟡" if p >= 50 else "🔴"
+        for _, r in pic_stats.iterrows():
+            total = int(r['total'])
+            done = int(r['done'])
+            none = int(r['none'])
+            progress = (done / total * 100) if total > 0 else 0
+            
+            # Lấy tag cá nhân nếu có trong danh sách
+            mention = DISCORD_TAGS.get(r['PIC'], f"**{r['PIC']}**")
+            
+            icon = "🟢" if progress >= 80 else "🟡" if progress >= 50 else "🔴"
+            msg += f"{icon} {mention}: `{progress:.1f}%` Done | IP: `{int(r['ip'])}` | **None: `{none}`**\n"
         
-        msg += f"{icon} **{mention}**: `{p:.1f}%` Hoàn thành\n"
-        msg += f"   • Xong: `{int(r['done'])}` | IP: `{int(r['ip'])}` | None: `{int(r['none'])}` \n"
-            msg += f"   • **Chưa làm (None): `{none}`**\n" # Thêm dòng này
-            msg += f"   • Tổng task: `{total}`\n"
-            msg += "─────────────────────\n"
-        
-        msg += "💡 *Dữ liệu được cập nhật tự động từ Google Sheets.*"
+        msg += "━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += "💡 *Dữ liệu tự động cập nhật từ Google Sheets.*"
 
-        # 7. Gửi Discord
+        # 5. Gửi Discord
         if WEBHOOK_URL:
             requests.post(WEBHOOK_URL, json={"content": msg})
-            print("✅ Đã gửi báo cáo đầy đủ thông tin!")
+            print("✅ Báo cáo kèm thẻ tên đã được gửi!")
 
     except Exception as e:
         print(f"❌ Lỗi: {e}")
