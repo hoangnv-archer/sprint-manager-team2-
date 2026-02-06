@@ -30,7 +30,7 @@ try:
         df['State'] = df['State'].fillna('None').replace('', 'None')
 
         # 3. Lọc Team (Chỉ lấy những dòng đã giao PIC)
-        valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú']
+        valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú', 'Thịnh', 'Đô', '3D', 'Anim', 'Thắng VFX']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
         st.title("🚀 Phân Tích Khối Lượng & Hiệu Suất Team")
