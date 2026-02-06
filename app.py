@@ -11,7 +11,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 URL = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
-    # 1. Đọc dữ liệu và xác định hàng tiêu đề
+    # 1. Đọc dữ liệu
     raw_df = conn.read(spreadsheet=URL, header=None)
     header_idx = next((i for i, row in raw_df.iterrows() if "Userstory/Todo" in row.values), None)
             
@@ -33,11 +33,9 @@ try:
 
         st.title("🚀 Sprint Workload & Performance")
 
-        # --- LOGIC TÍNH TOÁN MỚI (Cancel = Done) ---
-        # Done_List bao gồm cả 'done' và 'cancel'
+        # --- TÍNH TOÁN (Cancel = Done) ---
         pic_stats = df_team.groupby('PIC').agg(
             total_tasks=('Userstory/Todo', 'count'),
-            # Đếm task là done hoặc cancel
             done_tasks=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
             inprogress_tasks=('State_Clean', lambda x: (x == 'in progress').sum()),
             none_tasks=('State_Clean', lambda x: (x == 'none').sum()),
@@ -48,30 +46,50 @@ try:
         pic_stats['pending_total'] = pic_stats['total_tasks'] - pic_stats['done_tasks']
         pic_stats['Progress_Task'] = (pic_stats['done_tasks'] / pic_stats['total_tasks'] * 100).fillna(0).round(1)
 
-        # --- HIỂN THỊ TRÊN TOOL ---
-        st.subheader("👤 Trạng thái Task theo PIC (Cancel = Done)")
+        # --- HIỂN THỊ METRICS ---
+        st.subheader("👤 Trạng thái Task theo PIC")
         cols = st.columns(5)
         for i, row in pic_stats.iterrows():
             with cols[i % 5]:
                 st.markdown(f"### **{row['PIC']}**")
                 st.metric("Tiến độ", f"{row['Progress_Task']}%")
-                st.write(f"✅ Hoàn thành (+Cancel): **{int(row['done_tasks'])}**")
+                st.write(f"✅ Hoàn thành: **{int(row['done_tasks'])}** (gồm Cancel)")
                 st.write(f"🚧 In Progress: **{int(row['inprogress_tasks'])}**")
-                st.write(f"⏳ Chưa làm (None): **{int(row['none_tasks'])}**")
+                st.write(f"⏳ Chưa làm: **{int(row['none_tasks'])}**")
                 st.progress(min(row['Progress_Task']/100, 1.0))
                 st.divider()
 
         # --- BIỂU ĐỒ ---
-        st.subheader("📊 Phân bổ thời gian thực tế")
+        st.subheader("📊 Biểu đồ thời gian làm việc")
         fig_df = pic_stats[['PIC', 'active_real', 'total_est']].copy()
         fig_df.columns = ['PIC', 'Thực tế (Real)', 'Dự tính (Est)']
         fig = px.bar(fig_df.melt(id_vars='PIC'), x='PIC', y='value', color='variable', barmode='group', text_auto='.1f')
         st.plotly_chart(fig, use_container_width=True)
 
         # --- GỬI DISCORD ---
-        st.sidebar.subheader("📢 Discord Report")
+        st.sidebar.subheader("📢 Báo cáo Discord")
         webhook_url = st.sidebar.text_input("Webhook URL:", type="password")
-        if st.sidebar.button("📤 Gửi báo cáo"):
+        if st.sidebar.button("📤 Gửi báo cáo chi tiết"):
             if webhook_url:
-                msg = "📊 **SPRINT STATUS REPORT (Cancel = Done)** 📊\n"
+                msg = "📊 **SPRINT STATUS REPORT** 📊\n"
                 msg += "━━━━━━━━━━━━━━━━━━━━━\n"
+                for _, r in pic_stats.iterrows():
+                    msg += f"👤 **{r['PIC']}** | `{r['Progress_Task']}%` Done\n"
+                    msg += f"• Xong (+Cancel): `{int(r['done_tasks'])}` task\n"
+                    msg += f"• Đang làm: `{int(r['inprogress_tasks'])}` | Chưa làm: `{int(r['none_tasks'])}` \n"
+                    msg += "─────────────────────\n"
+                
+                response = requests.post(webhook_url, json={"content": msg})
+                if response.status_code in [200, 204]:
+                    st.sidebar.success("Đã gửi báo cáo!")
+                else:
+                    st.sidebar.error(f"Lỗi gửi Discord: {response.status_code}")
+
+        st.subheader("📋 Chi tiết danh sách Task")
+        st.dataframe(df_team[['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']], use_container_width=True)
+              
+    else:
+        st.error("Không tìm thấy hàng tiêu đề 'Userstory/Todo'.")
+
+except Exception as e:
+    st.error(f"Lỗi hệ thống: {e}")
