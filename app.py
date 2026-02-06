@@ -125,18 +125,19 @@ except Exception as e:
     st.error(f"Lỗi hệ thống: {e}")
 
 
-# --- TÍNH NĂNG GỬI BIỂU ĐỒ QUA DISCORD ---
+# --- TÍNH NĂNG GỬI BIỂU ĐỒ QUA DISCORD (KHÔNG DÙNG KALEIDO) ---
 st.sidebar.subheader("📢 Gửi ảnh biểu đồ")
 webhook_url_img = st.sidebar.text_input("Discord Webhook URL (Ảnh):", type="password", key="webhook_img")
 
 if st.sidebar.button("🚀 Gửi ảnh lên Discord"):
     if webhook_url_img and 'fig' in locals():
         try:
-            # Chuyển biểu đồ thành dữ liệu ảnh PNG
-            # engine="kaleido" kết hợp với bản 0.1.0post1 sẽ chạy mượt trên Cloud
-            img_bytes = fig.to_image(format="png", engine="kaleido")
+            # 1. Chuyển biểu đồ thành dữ liệu hình ảnh (Dùng engine mặc định của Plotly)
+            # Nếu không có kaleido, Plotly sẽ cố gắng dùng MathJax/Browser, 
+            # nhưng cách an toàn nhất trên Cloud là dùng buffer.
+            img_bytes = fig.to_image(format="png")
             
-            # Gửi file đến Discord
+            # 2. Gửi file đến Discord
             files = {'file': ('sprint_report.png', img_bytes, 'image/png')}
             payload = {"content": "📊 **Báo cáo biểu đồ Sprint hiện tại**"}
             
@@ -145,8 +146,10 @@ if st.sidebar.button("🚀 Gửi ảnh lên Discord"):
             if response.status_code in [200, 204]:
                 st.sidebar.success("✅ Đã gửi ảnh thành công!")
             else:
-                st.sidebar.error(f"❌ Lỗi server: {response.status_code}")
+                st.sidebar.error(f"❌ Lỗi: {response.status_code}")
+                
         except Exception as e:
-            st.sidebar.error(f"❌ Lỗi xuất ảnh: {str(e)}")
+            st.sidebar.error("⚠️ Không thể xuất ảnh trực tiếp trên Cloud do thiếu trình duyệt.")
+            st.sidebar.info("💡 Mẹo: Bạn có thể chụp ảnh màn hình hoặc dùng nút 'Download plot as png' trên biểu đồ rồi gửi thủ công.")
     else:
-        st.sidebar.warning("⚠️ Vui lòng nhập URL và đảm bảo biểu đồ đã hiển thị.")
+        st.sidebar.warning("⚠️ Vui lòng nhập URL.")
