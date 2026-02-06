@@ -1,5 +1,5 @@
-st-gsheets-connection
 pandas
+streamlit-gsheets-connection
 plotly
 requests
-kaleido==0.1.0post1
+pillow
