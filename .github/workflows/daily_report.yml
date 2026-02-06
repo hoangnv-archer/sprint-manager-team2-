@@ -18,10 +18,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas requests st-gsheets-connection streamlit
-          
+          pip install pandas requests gspread
+      
       - name: Run report script
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           GSHEETS_URL: ${{ secrets.GSHEETS_URL }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
         run: python send_discord_auto.py
