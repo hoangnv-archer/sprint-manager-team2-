@@ -2,6 +2,8 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import plotly.express as px
+import requests
+import io
 
 st.set_page_config(page_title="Sprint Workload Analyzer", layout="wide")
 
@@ -121,3 +123,43 @@ try:
 
 except Exception as e:
     st.error(f"Lỗi hệ thống: {e}")
+
+
+st.sidebar.divider()
+st.sidebar.subheader("📢 Thông báo Discord")
+webhook_url_image = st.sidebar.text_input("https://discord.com/api/webhooks/1469191941261492386/gZ1sx5hnTojIKw5kp5quEotwIldRmCIlhXkZBu9M1Ejs-ZgEUtGsYHlS2CwIWguNbrzc:", key="image_webhook", type="password")
+
+if st.sidebar.button("Gửi BIỂU ĐỒ vào Discord (Ảnh)"):
+    if webhook_url_image:
+        if 'fig' in locals() and fig is not None: # Kiểm tra biến fig có tồn tại không
+            try:
+                # 1. Lưu biểu đồ Plotly dưới dạng ảnh (PNG) vào bộ nhớ
+                # Cần thư viện kaleido: pip install kaleido
+                img_bytes = fig.to_image(format="png", engine="kaleido", scale=2) # scale=2 để ảnh rõ nét hơn
+                
+                # 2. Chuẩn bị file để gửi qua Webhook
+                files = {
+                    'file': ('sprint_performance_chart.png', img_bytes, 'image/png')
+                }
+                
+                # 3. Gửi kèm một tin nhắn văn bản
+                payload = {
+                    "content": "🚀 **BÁO CÁO BIỂU ĐỒ HIỆU SUẤT SPRINT - REAL-TIME** 📊\n"
+                               "Đây là biểu đồ phân tích khối lượng công việc và tiến độ của team.\n"
+                               "Chi tiết xem tại Dashboard."
+                }
+
+                # Gửi yêu cầu POST lên Discord Webhook
+                response = requests.post(webhook_url_image, data=payload, files=files)
+                
+                if response.status_code == 200:
+                    st.sidebar.success("✅ Đã gửi biểu đồ vào Discord thành công!")
+                else:
+                    st.sidebar.error(f"❌ Lỗi khi gửi ảnh: {response.status_code} - {response.text}")
+            except Exception as e:
+                st.sidebar.error(f"❌ Lỗi khi tạo hoặc gửi ảnh: {e}. Vui lòng kiểm tra lại 'kaleido' đã được cài đặt.")
+        else:
+            st.sidebar.warning("⚠️ Biểu đồ chưa được tạo hoặc không tìm thấy để gửi.")
+    else:
+        st.sidebar.warning("⚠️ Vui lòng nhập Discord Webhook URL!")
+
