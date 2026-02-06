@@ -56,7 +56,7 @@ try:
         pic_stats['Total_Estimate'] = pic_stats['Active_Est'] + pic_stats['Pending_Est']
 
         # Hiệu suất làm việc (Chỉ tính trên những task đã bắt đầu làm để công bằng)
-        pic_stats['Efficiency (%)'] = (pic_stats['Active_Est'] / pic_stats['Active_Real'] * 100).fillna(0).round(1)
+        pic_stats['Efficiency (%)'] = (pic_stats['Total_Est'] / pic_stats['Active_Real'] * 100).fillna(0).round(1)
         pic_stats.loc[pic_stats['Active_Real'] == 0, 'Efficiency (%)'] = 0
 
         # --- GIAO DIỆN ---
