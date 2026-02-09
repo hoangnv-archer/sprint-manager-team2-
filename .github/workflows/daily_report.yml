@@ -1,7 +1,7 @@
 name: Daily Sprint Report
 on:
   schedule:
-    - cron: '15 3 * * *' # 8:30 AM VN
+    - cron: '5 3 * * *' # 8:30 AM VN
   workflow_dispatch:
 
 jobs:
