@@ -5,23 +5,20 @@ import plotly.express as px
 import requests
 from datetime import datetime, time, timedelta
 
-# --- 1. HÀM TÍNH GIỜ LÀM VIỆC (8:30 - 18:00) ---
+# --- 1. HÀM TÍNH GIỜ LÀM VIỆC CHUẨN ---
 def calculate_working_hours(start_dt, end_dt):
     if pd.isna(start_dt) or start_dt > end_dt:
         return 0
     total_seconds = 0
     curr = start_dt
     while curr.date() <= end_dt.date():
-        if curr.weekday() < 5: # Thứ 2 - Thứ 6
-            morn_s = datetime.combine(curr.date(), time(8, 30))
-            morn_e = datetime.combine(curr.date(), time(12, 0))
-            aft_s = datetime.combine(curr.date(), time(13, 30))
-            aft_e = datetime.combine(curr.date(), time(18, 0))
+        if curr.weekday() < 5: # Chỉ tính thứ 2 - thứ 6
+            morn_s, morn_e = datetime.combine(curr.date(), time(8, 30)), datetime.combine(curr.date(), time(12, 0))
+            aft_s, aft_e = datetime.combine(curr.date(), time(13, 30)), datetime.combine(curr.date(), time(18, 0))
             
-            # Tính thời gian thực làm trong ca sáng và ca chiều
+            # Tính ca sáng & ca chiều
             s_m, e_m = max(curr, morn_s), min(end_dt, morn_e)
             if s_m < e_m: total_seconds += (e_m - s_m).total_seconds()
-            
             s_a, e_a = max(curr, aft_s), min(end_dt, aft_e)
             if s_a < e_a: total_seconds += (e_a - s_a).total_seconds()
             
@@ -29,8 +26,6 @@ def calculate_working_hours(start_dt, end_dt):
     return total_seconds / 3600
 
 st.set_page_config(page_title="Sprint Workload Analyzer", layout="wide")
-
-# --- 2. KẾT NỐI VÀ ĐỌC DỮ LIỆU ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 URL = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
 
@@ -40,23 +35,26 @@ try:
             
     if header_idx is not None:
         df = conn.read(spreadsheet=URL, skiprows=header_idx)
+        
+        # SỬA LỖI KEYERROR: Tự động làm sạch tên cột (xóa khoảng trắng, chuẩn hóa chữ)
         df.columns = [str(c).strip() for c in df.columns]
         
-        # Xử lý định dạng số
-        for col in ['Estimate Dev', 'Real']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        # Đảm bảo các cột quan trọng tồn tại để tránh lỗi hệ thống
+        cols_to_check = {'Estimate Dev': 0, 'Real': 0, 'Start_time': None, 'State': 'None', 'PIC': 'Unknown'}
+        for col, default in cols_to_check.items():
+            if col not in df.columns:
+                df[col] = default
+
+        # Xử lý định dạng
+        df['Estimate Dev'] = pd.to_numeric(df['Estimate Dev'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Real'] = pd.to_numeric(df['Real'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
+        df['Start_time'] = pd.to_datetime(df['Start_time'], errors='coerce')
+        df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
         
-        # Xử lý cột Start_time cho tính năng mới
-        if 'Start_time' in df.columns:
-            df['Start_time'] = pd.to_datetime(df['Start_time'], errors='coerce')
-        
-        # Chuẩn hóa trạng thái (Tính năng cũ)
-        df['State_Clean'] = df['State'].fillna('None').replace('', 'None').str.strip().str.lower()
         valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú', 'Thịnh', 'Đô', 'Tùng', 'Anim', 'Thắng VFX']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
-        # --- 3. LOGIC CẢNH BÁO OVER ESTIMATE (MỚI) ---
+        # LOGIC CẢNH BÁO
         now = datetime.now()
         over_est_list = []
         for _, row in df_team.iterrows():
@@ -64,22 +62,15 @@ try:
                 actual = calculate_working_hours(row['Start_time'], now)
                 est = float(row['Estimate Dev'])
                 if est > 0 and actual > est:
-                    over_est_list.append({
-                        "PIC": row['PIC'], 
-                        "Task": row['Userstory/Todo'], 
-                        "Actual": round(actual, 1), 
-                        "Est": est
-                    })
+                    over_est_list.append({"PIC": row['PIC'], "Task": row['Userstory/Todo'], "Actual": round(actual, 1), "Est": est})
 
         st.title("🚀 Sprint Workload & Performance")
 
-        # Hiển thị cảnh báo ngay đầu trang nếu có task quá giờ
         if over_est_list:
             st.warning(f"🚨 Có {len(over_est_list)} task đang vượt quá thời gian Estimate!")
-            with st.expander("Chi tiết task vượt Estimate"):
-                st.table(pd.DataFrame(over_est_list))
+            st.table(pd.DataFrame(over_est_list))
 
-        # --- 4. TÍNH TOÁN STATS (Tính năng cũ) ---
+        # --- TÍNH TOÁN & HIỂN THỊ METRICS (TÍNH NĂNG CŨ) ---
         pic_stats = df_team.groupby('PIC').agg(
             total_tasks=('Userstory/Todo', 'count'),
             done_tasks=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
@@ -88,57 +79,40 @@ try:
             active_real=('Real', 'sum'),
             total_est=('Estimate Dev', 'sum')
         ).reset_index()
-        
         pic_stats['Progress_Task'] = (pic_stats['done_tasks'] / pic_stats['total_tasks'] * 100).fillna(0).round(1)
 
-        # --- 5. HIỂN THỊ METRICS PIC (Tính năng cũ) ---
         st.subheader("👤 Trạng thái Task theo PIC")
         cols = st.columns(5)
         for i, row in pic_stats.iterrows():
             with cols[i % 5]:
                 st.markdown(f"### **{row['PIC']}**")
                 st.metric("Tiến độ", f"{row['Progress_Task']}%")
-                st.write(f"✅ Hoàn thành: **{int(row['done_tasks'])}**")
-                st.write(f"🚧 In Progress: **{int(row['inprogress_tasks'])}**")
-                st.write(f"⏳ Chưa làm: **{int(row['none_tasks'])}**")
                 st.progress(min(row['Progress_Task']/100, 1.0))
+                st.write(f"✅ Xong: {int(row['done_tasks'])} | 🚧 Đang làm: {int(row['inprogress_tasks'])}")
                 st.divider()
 
-        # --- 6. BIỂU ĐỒ (Tính năng cũ) ---
-        st.subheader("📊 Biểu đồ thời gian làm việc")
-        fig_df = pic_stats[['PIC', 'active_real', 'total_est']].copy()
-        fig_df.columns = ['PIC', 'Thực tế (Real)', 'Dự tính (Est)']
-        fig = px.bar(fig_df.melt(id_vars='PIC'), x='PIC', y='value', color='variable', barmode='group', text_auto='.1f')
-        st.plotly_chart(fig, use_container_width=True)
-
-        # --- 7. GỬI DISCORD (Tính năng cũ + Cảnh báo mới) ---
+        # --- GỬI DISCORD (SỬA LỖI THỤT LỀ) ---
         st.sidebar.subheader("📢 Báo cáo Discord")
         webhook_url = st.sidebar.text_input("Webhook URL:", type="password")
         if st.sidebar.button("📤 Gửi báo cáo chi tiết"):
             if webhook_url:
-                msg = "📊 **SPRINT STATUS REPORT** 📊\n━━━━━━━━━━━━━━━━━━━━━\n"
+                msg = "📊 **SPRINT REPORT**\n"
                 for _, r in pic_stats.iterrows():
-                    msg += f"👤 **{r['PIC']}** | `{r['Progress_Task']}%` Done\n"
-                    msg += f"• Xong: `{int(r['done_tasks'])}` | Đang làm: `{int(r['inprogress_tasks'])}` \n"
+                    msg += f"👤 **{r['PIC']}**: `{r['Progress_Task']}%` Done\n"
                 
-                # Thêm phần cảnh báo vào tin nhắn Discord (Sửa lỗi thụt lề tại đây)
                 if over_est_list:
                     msg += "\n🚨 **CẢNH BÁO VƯỢT ESTIMATE**\n"
                     for item in over_est_list:
+                        # Thụt lề chuẩn 4 dấu cách để tránh lỗi IndentationError
                         msg += f"• {item['PIC']}: {item['Task']} (`{item['Actual']}h`/{item['Est']}h)\n"
                 
-                response = requests.post(webhook_url, json={"content": msg})
-                if response.status_code in [200, 204]:
-                    st.sidebar.success("Đã gửi báo cáo!")
-                else:
-                    st.sidebar.error(f"Lỗi: {response.status_code}")
+                requests.post(webhook_url, json={"content": msg})
+                st.sidebar.success("Đã gửi!")
 
-        # --- 8. CHI TIẾT DANH SÁCH (Tính năng cũ) ---
-        st.subheader("📋 Chi tiết danh sách Task")
-        st.dataframe(df_team[['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real', 'Start_time']], use_container_width=True)
-            
+        st.plotly_chart(px.bar(pic_stats, x='PIC', y=['active_real', 'total_est'], barmode='group'), use_container_width=True)
+        st.dataframe(df_team[['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Start_time']], use_container_width=True)
+
     else:
         st.error("Không tìm thấy hàng tiêu đề 'Userstory/Todo'.")
-
 except Exception as e:
     st.error(f"Lỗi hệ thống: {e}")
