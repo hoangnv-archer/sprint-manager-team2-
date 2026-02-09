@@ -91,4 +91,38 @@ try:
             with cols[i % 5]:
                 st.markdown(f"### **{row['PIC']}**")
                 st.metric("Tiến độ", f"{row['percent']}%")
-                st.write(f"✅ Xong: {int(row['done']
+                st.write(f"✅ Xong: {int(row['done'])} | 🚧 Làm: {int(row['doing'])}")
+                st.write(f"⏳ Còn lại: **{int(row['remain'])}** task")
+                st.progress(min(row['percent']/100, 1.0))
+                st.divider()
+
+        # --- GỬI DISCORD (Gồm cảnh báo) ---
+        st.sidebar.subheader("📢 Discord Report")
+        webhook_url = st.sidebar.text_input("Webhook URL:", type="password")
+        if st.sidebar.button("📤 Gửi báo cáo"):
+            if webhook_url:
+                msg = "📊 **SPRINT PROGRESS REPORT**\n"
+                for _, r in pic_stats.iterrows():
+                    msg += f"👤 **{r['PIC']}**: `{r['percent']}%` (Còn {int(r['remain'])} task)\n"
+                
+                msg += "\n⚠️ **CẢNH BÁO VƯỢT GIỜ:**\n"
+                if over_est_list:
+                    for item in over_est_list:
+                        msg += f"🚩 `{item['PIC']}` làm lố: **{item['Task']}** ({item['Actual']}h/{item['Est']}h)\n"
+                else:
+                    msg += "✅ Mọi task đều ổn.\n"
+                
+                requests.post(webhook_url, json={"content": msg})
+                st.sidebar.success("Đã gửi!")
+
+        # BIỂU ĐỒ & BẢNG
+        st.plotly_chart(px.bar(pic_stats, x='PIC', y=['total', 'done'], barmode='group'), use_container_width=True)
+        st.subheader("📋 Chi tiết Task")
+        # Sử dụng Start_Display để chắc chắn hiện giá trị chuỗi
+        st.dataframe(df_team[['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Start_Display']], use_container_width=True)
+
+    else:
+        st.error("Không tìm thấy tiêu đề 'Userstory/Todo'.")
+except Exception as e:
+    # Fix KeyError bằng cách in lỗi nhưng không sập app
+    st.error(f"Lỗi hệ thống: {e}")
