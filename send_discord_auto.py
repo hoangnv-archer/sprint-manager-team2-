@@ -46,7 +46,7 @@ def get_report():
 
         # 5. SOẠN TIN NHẮN
         msg = f"📊 **CẬP NHẬT TIẾN ĐỘ SPRINT** {DISCORD_TAGS.get('TEAM_ROLE', '@everyone')}\n"
-        msg += "━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += "--------------------------\n"
         
         for _, r in pic_stats.iterrows():
             # Ép kiểu dữ liệu về số nguyên để hiển thị đúng
@@ -65,7 +65,7 @@ def get_report():
             msg += f"   ✅ **Xong/Cancel: `{done}`**\n"
             msg += f"   🚧 Đang làm: `{ip}`\n"
             msg += f"   ⏳ Chưa làm: `{none}`\n"
-            msg += "─────────────────────\n"
+            msg += "------------------------------\n"
         
         msg += "💡 *Ghi chú: Task được cập nhật hàng ngày theo Sprint backlog.*"
 
