@@ -108,13 +108,34 @@ try:
         # --- GỬI DISCORD ---
         st.sidebar.subheader("📢 Báo cáo Discord")
         webhook_url = st.sidebar.text_input("Webhook URL:", type="password")
+        
         if st.sidebar.button("📤 Gửi báo cáo chi tiết"):
             if webhook_url:
-                msg = "📊 **SPRINT REPORT**\n"
+                # 1. Tạo phần tiêu đề và báo cáo tiến độ chung
+                msg = "📊 **SPRINT STATUS REPORT** 📊\n"
+                msg += "━━━━━━━━━━━━━━━━━━━━━\n"
                 for _, r in pic_stats.iterrows():
-                    msg += f"👤 **{r['PIC']}**: `{r['Progress_Task']}%` Done | Còn lại: `{int(r['pending_total'])}` task\n"
-                requests.post(webhook_url, json={"content": msg})
-                st.sidebar.success("Đã gửi!")
+                    msg += f"👤 **{r['PIC']}** | `{r['Progress_Task']}%` Done\n"
+                    msg += f"• Còn lại: `{int(r['pending_total'])}` task\n"
+                
+                # 2. Tự động kiểm tra và thêm phần Cảnh báo nếu có task vượt Estimate
+                if over_est_list:
+                    msg += "\n🚨 **CẢNH BÁO: TASK VƯỢT ESTIMATE**\n"
+                    msg += "━━━━━━━━━━━━━━━━━━━━━\n"
+                    for item in over_est_list:
+                        # Liệt kê cụ thể: Tên PIC - Tên Task (Số giờ thực tế / Số giờ Estimate)
+                        msg += f"🔥 **{item['PIC']}**: {item['Task']}\n"
+                        msg += f"   ➔ Thực tế: `{item['Actual']}h` (Estimate: `{item['Est']}h`)\n"
+                
+                # Gửi dữ liệu đi
+                response = requests.post(webhook_url, json={"content": msg})
+                
+                if response.status_code in [200, 204]:
+                    st.sidebar.success("✅ Đã gửi báo cáo kèm cảnh báo!")
+                else:
+                    st.sidebar.error(f"❌ Lỗi gửi: {response.status_code}")
+            else:
+                st.sidebar.warning("Vui lòng nhập Webhook URL!")
 
     else:
         st.error("Không tìm thấy hàng tiêu đề 'Userstory/Todo'.")
