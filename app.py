@@ -23,7 +23,7 @@ def get_actual_hours(start_val):
 
 TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
 TG_CHAT_ID = "-1002102856307"  # Đảm bảo có dấu trừ nếu là Group
-TG_TOPIC_ID = 567
+TG_TOPIC_ID = 18251
 
 def send_telegram_msg(message):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
