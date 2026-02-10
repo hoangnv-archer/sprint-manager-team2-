@@ -121,7 +121,7 @@ try:
             # 2. Vòng lặp lấy toàn bộ chỉ số từ pic_stats
             for _, r in pic_stats.iterrows():
                 msg += f"👤 *{r['PIC']}*\n"
-                msg += f"┣ Tiến độ: `{r['percent']}%` \n"
+                msg += f"┣ Tiến độ: **{r['percent']}%** \n"
                 msg += f"┣ ✅ Đã hoàn thành: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
                 msg += f"┣ ⏳ *Tồn đọng: {int(r['pending'])} task*\n"
                 msg += f"┗ ⏱ Giờ: {round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h (Real/Est)\n"
