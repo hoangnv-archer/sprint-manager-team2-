@@ -12,7 +12,7 @@ VN_TZ = timezone(timedelta(hours=7))
 st_autorefresh(interval=30000, key="tele_report_check")
 
 # Danh sách giờ gửi báo cáo tự động
-SCHEDULED_HOURS = ["15:30", "16:00"]
+SCHEDULED_HOURS = ["8:30"]
 
 # Thông tin Telegram
 TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
