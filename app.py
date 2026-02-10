@@ -12,7 +12,6 @@ def get_actual_hours(start_val):
     if pd.isna(start_val) or str(start_val).strip().lower() in ['none', '']:
         return 0
     try:
-        # Ép kiểu datetime cho định dạng 2026-09-02 16:14:09
         start_dt = pd.to_datetime(start_val)
         if start_dt.tzinfo is None:
             start_dt = start_dt.replace(tzinfo=VN_TZ)
@@ -22,15 +21,16 @@ def get_actual_hours(start_val):
     except:
         return 0
 
+# --- THÔNG TIN TELEGRAM ---
 TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
-TG_CHAT_ID = "-1002102856307"  # Đảm bảo có dấu trừ nếu là Group
+TG_CHAT_ID = "-1002102856307" 
 TG_TOPIC_ID = 18251
 
 def send_telegram_msg(message):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     payload = {
         "chat_id": TG_CHAT_ID, 
-        "message_thread_id": TG_TOPIC_ID, # Gửi đúng vào topic này
+        "message_thread_id": TG_TOPIC_ID,
         "text": message, 
         "parse_mode": "Markdown"
     }
@@ -43,7 +43,6 @@ def send_telegram_msg(message):
 st.set_page_config(page_title="Team 2 Sprint Dashboard", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- THAY LINK GOOGLE SHEET TEAM 2 TẠI ĐÂY ---
 URL_TEAM_2 = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
@@ -54,10 +53,8 @@ try:
         df = conn.read(spreadsheet=URL_TEAM_2, skiprows=header_idx, ttl=0)
         df.columns = [str(c).strip() for c in df.columns]
 
-        # Tự động tìm cột Start dựa trên từ khóa để tránh lỗi 'not in index'
         t_col = next((c for c in df.columns if "start" in c.lower()), None)
         
-        # Chuẩn hóa dữ liệu số
         for col in ['Estimate Dev', 'Real']:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.replace(',', '.').replace('None', '0')
@@ -65,8 +62,8 @@ try:
 
         df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
         
-        # --- CẬP NHẬT DANH SÁCH PIC CHO TEAM 2 ---
-        valid_pics = ['Chuân', 'Việt', 'Thắng', 'QA', 'Mai', 'Hải Anh', 'Thuật', 'Hiếu'] # Thay bằng tên PIC thực tế của Team 2
+        # --- DANH SÁCH PIC ---
+        valid_pics = ['Chuân', 'Việt', 'Thắng', 'QA', 'Mai', 'Hải Anh', 'Thuật', 'Hiếu']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
         # 2. LOGIC CẢNH BÁO LỐ GIỜ
@@ -84,12 +81,11 @@ try:
 
         st.title("📊 Team 2 Sprint Performance")
 
-        # Hiển thị Cảnh báo Đỏ (UI quan trọng)
         if over_est_list:
             st.error(f"🚨 PHÁT HIỆN {len(over_est_list)} TASK LÀM QUÁ DỰ KIẾN!")
             st.table(pd.DataFrame(over_est_list))
 
-        # --- 3. KHÔI PHỤC TOÀN BỘ GIAO DIỆN METRICS ---
+        # --- 3. THỐNG KÊ PIC ---
         pic_stats = df_team.groupby('PIC').agg(
             total=('Userstory/Todo', 'count'),
             done=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
@@ -111,35 +107,27 @@ try:
                 st.progress(min(row['percent']/100, 1.0))
                 st.divider()
 
-        # BIỂU ĐỒ (UI cũ)
         st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
 
-        # 4. GỬI TELEGRAM TRÊN SIDEBAR
-if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
-        # 1. Khởi tạo tiêu đề tin nhắn
-            msg = "📊 *TEAM 2 REPORT* \n" + "━" * 15 + "\n"
+        # 4. GỬI TELEGRAM (Đã thụt lề vào trong khối header_idx)
+        st.sidebar.subheader("📢 Telegram Report")
+        if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
+            msg = f"📊 *TEAM 2 REPORT - {datetime.now(VN_TZ).strftime('%d/%m %H:%M')}*\n" + "━" * 15 + "\n"
+            for _, r in pic_stats.iterrows():
+                msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
             
-            # 2. Thống kê tiến độ từng PIC
-            if not pic_stats.empty:
-                for _, r in pic_stats.iterrows():
-                    msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
-            else:
-                msg += "⚠️ Không có dữ liệu PIC.\n"
-        
-            # 3. Thống kê lố giờ (Bắt lỗi 16:14 so với 16:45)
             if over_est_list:
                 msg += "\n🚨 *CẢNH BÁO LỐ GIỜ:*\n"
                 for item in over_est_list:
                     msg += f"🔥 `{item['PIC']}`: {item['Task']} ({item['Thực tế']}/{item['Dự kiến']})\n"
             
-            # 4. Thực hiện gửi
             res = send_telegram_msg(msg)
-            
             if res.get("ok"):
                 st.sidebar.success(f"Đã gửi vào Topic ID: {TG_TOPIC_ID}")
             else:
-                st.sidebar.error(f"Lỗi Telegram: {res.get('description')}")
-        # 5. BẢNG CHI TIẾT (UI cũ)
+                st.sidebar.error(f"Lỗi: {res.get('description')}")
+
+        # 5. BẢNG CHI TIẾT
         st.subheader("📋 Danh sách Task chi tiết")
         display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
         if t_col: display_cols.append(t_col)
@@ -148,4 +136,4 @@ if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
     else:
         st.error("Không tìm thấy hàng chứa 'Userstory/Todo'.")
 except Exception as e:
-    st.error(f"Lỗi: {e}")
+    st.error(f"Lỗi hệ thống: {e}")
