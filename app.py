@@ -4,10 +4,23 @@ import pandas as pd
 import plotly.express as px
 import requests
 from datetime import datetime, timezone, timedelta
+from streamlit_autorefresh import st_autorefresh
 
-# --- 1. CỐ ĐỊNH MÚI GIỜ VIỆT NAM ---
+# --- 1. CẤU HÌNH HỆ THỐNG ---
 VN_TZ = timezone(timedelta(hours=7))
 
+# Tự động refresh mỗi 30 giây để kiểm tra giờ gửi cố định
+st_autorefresh(interval=30000, key="tele_report_check")
+
+# Danh sách giờ gửi báo cáo tự động (Định dạng HH:MM)
+SCHEDULED_HOURS = ["15:30", "16:00"]
+
+# Thông tin Telegram
+TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
+TG_CHAT_ID = "-1002102856307" 
+TG_TOPIC_ID = 18251
+
+# --- 2. CÁC HÀM HỖ TRỢ ---
 def get_actual_hours(start_val):
     if pd.isna(start_val) or str(start_val).strip().lower() in ['none', '']:
         return 0
@@ -20,11 +33,6 @@ def get_actual_hours(start_val):
         return max(0, diff.total_seconds() / 3600)
     except:
         return 0
-
-# --- THÔNG TIN TELEGRAM ---
-TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
-TG_CHAT_ID = "-1002102856307" 
-TG_TOPIC_ID = 18251
 
 def send_telegram_msg(message):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -40,9 +48,30 @@ def send_telegram_msg(message):
     except Exception as e:
         return {"ok": False, "description": str(e)}
 
+def build_report(pic_stats, over_est_list, is_auto=False):
+    now_str = datetime.now(VN_TZ).strftime('%d/%m %H:%M')
+    prefix = "🤖 *AUTO REPORT*" if is_auto else "📊 *MANUAL REPORT*"
+    msg = f"{prefix} ({now_str})\n"
+    msg += "━━━━━━━━━━━━━━━━━━\n\n"
+    
+    for _, r in pic_stats.iterrows():
+        msg += f"👤 *{r['PIC']}*\n"
+        msg += f"┣ Tiến độ: **{r['percent']}%** \n"
+        msg += f"┣ ✅ Đã xong: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
+        msg += f"┣ ⏳ *Tồn đọng: {int(r['pending'])} task*\n"
+        msg += f"┗ ⏱ Giờ: `{round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h`\n"
+        msg += "──────────────────\n"
+    
+    if over_est_list:
+        msg += "\n🚨 *CẢNH BÁO VƯỢT GIỜ DỰ KIẾN:*\n"
+        for item in over_est_list:
+            msg += f"🔥 `{item['PIC']}`: {item['Task']}\n"
+            msg += f"    └ Thực tế: **{item['Thực tế']}** (Dự kiến: {item['Dự kiến']})\n"
+    return msg
+
+# --- 3. GIAO DIỆN & XỬ LÝ DỮ LIỆU ---
 st.set_page_config(page_title="Team 2 Sprint Dashboard", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
-
 URL_TEAM_2 = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
@@ -62,11 +91,10 @@ try:
 
         df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
         
-        # --- DANH SÁCH PIC ---
         valid_pics = ['Chuân', 'Việt', 'Thắng', 'QA', 'Mai', 'Hải Anh', 'Thuật', 'Hiếu']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
-        # 2. LOGIC CẢNH BÁO LỐ GIỜ
+        # Logic lố giờ
         over_est_list = []
         if t_col:
             for _, row in df_team.iterrows():
@@ -79,13 +107,7 @@ try:
                             "Thực tế": f"{round(actual_h * 60)}p", "Dự kiến": f"{round(est_h * 60)}p"
                         })
 
-        st.title("📊 Team 2 Sprint Performance")
-
-        if over_est_list:
-            st.error(f"🚨 PHÁT HIỆN {len(over_est_list)} TASK LÀM QUÁ DỰ KIẾN!")
-            st.table(pd.DataFrame(over_est_list))
-
-        # --- 3. THỐNG KÊ PIC ---
+        # Thống kê PIC
         pic_stats = df_team.groupby('PIC').agg(
             total=('Userstory/Todo', 'count'),
             done=('State_Clean', lambda x: x.isin(['done', 'cancel', 'dev done']).sum()),
@@ -96,52 +118,49 @@ try:
         pic_stats['pending'] = pic_stats['total'] - pic_stats['done']
         pic_stats['percent'] = (pic_stats['done'] / pic_stats['total'] * 100).fillna(0).round(1)
 
+        # --- HIỂN THỊ DASHBOARD ---
+        st.title("📊 Team 2 Sprint Performance")
+        
+        if over_est_list:
+            st.error(f"🚨 PHÁT HIỆN {len(over_est_list)} TASK LÀM QUÁ DỰ KIẾN!")
+            st.table(pd.DataFrame(over_est_list))
+
         st.subheader("👤 Trạng thái chi tiết PIC")
-        cols = st.columns(min(len(pic_stats), 5))
+        m_cols = st.columns(min(len(pic_stats), 5))
         for i, row in pic_stats.iterrows():
-            with cols[i % 5]:
+            with m_cols[i % 5]:
                 st.markdown(f"### **{row['PIC']}**")
                 st.metric("Hoàn thành", f"{row['percent']}%")
-                st.write(f"✅ Xong: {int(row['done'])} | 🚧 Đang làm: {int(row['doing'])}")
-                st.write(f"⏳ **Tồn đọng: {int(row['pending'])} task**")
+                st.write(f"✅ Số task đã hoàn thành: {int(row['done'])} | 🚧 Số task đang tiến hành: {int(row['doing'])}")
+                st.write(f"⏳ **Số task còn tồn đọng: {int(row['pending'])} task**")
                 st.progress(min(row['percent']/100, 1.0))
                 st.divider()
 
-        st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
+        st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group'), use_container_width=True)
 
-        # 4. GỬI TELEGRAM (Đã thụt lề vào trong khối header_idx)
-        # 4. GỬI TELEGRAM (Nội dung đầy đủ như bảng Metrics)
+        # --- XỬ LÝ GỬI TIN NHẮN ---
         st.sidebar.subheader("📢 Telegram Report")
-        if st.sidebar.button("📤 Gửi báo cáo chi tiết vào Topic"):
-            # 1. Khởi tạo tiêu đề với thời gian thực
-            now_str = datetime.now(VN_TZ).strftime('%d/%m %H:%M')
-            msg = f"📊 *TEAM 2 SPRINT REPORT ({now_str})*\n"
-            msg += "━━━━━━━━━━━━━━━━━━\n\n"
-            
-            # 2. Vòng lặp lấy toàn bộ chỉ số từ pic_stats
-            for _, r in pic_stats.iterrows():
-                msg += f"👤 *{r['PIC']}*\n"
-                msg += f"┣ Tiến độ: **{r['percent']}%** \n"
-                msg += f"┣ ✅ Đã hoàn thành: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
-                msg += f"┣ ⏳ *Tồn đọng: {int(r['pending'])} task*\n"
-                msg += f"┗ ⏱ Giờ: {round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h (Real/Est)\n"
-                msg += "──────────────────\n"
-            
-            # 3. Thêm phần cảnh báo lố giờ nếu có
-            if over_est_list:
-                msg += "\n🚨 *CẢNH BÁO VƯỢT GIỜ DỰ KIẾN:*\n"
-                for item in over_est_list:
-                    msg += f"🔥 `{item['PIC']}`: {item['Task']}\n"
-                    msg += f"   └ Thực tế: {item['Thực tế']} (Dự kiến: {item['Dự kiến']})\n"
-            
-            # 4. Thực hiện gửi
-            res = send_telegram_msg(msg)
-            
+        
+        # 1. Nút bấm thủ công
+        if st.sidebar.button("📤 Gửi báo cáo ngay bây giờ"):
+            content = build_report(pic_stats, over_est_list, is_auto=False)
+            res = send_telegram_msg(content)
+            if res.get("ok"): st.sidebar.success("Đã gửi thủ công!")
+            else: st.sidebar.error(f"Lỗi: {res.get('description')}")
+
+        # 2. Logic tự động gửi theo giờ cố định
+        now_time = datetime.now(VN_TZ).strftime("%H:%M")
+        if "last_sent_time" not in st.session_state:
+            st.session_state.last_sent_time = ""
+
+        if now_time in SCHEDULED_HOURS and st.session_state.last_sent_time != now_time:
+            auto_content = build_report(pic_stats, over_est_list, is_auto=True)
+            res = send_telegram_msg(auto_content)
             if res.get("ok"):
-                st.sidebar.success(f"Đã gửi báo cáo chi tiết vào Topic {TG_TOPIC_ID}!")
-            else:
-                st.sidebar.error(f"Lỗi: {res.get('description')}")
-        # 5. BẢNG CHI TIẾT
+                st.session_state.last_sent_time = now_time
+                st.sidebar.info(f"Đã tự động gửi báo cáo lúc {now_time}")
+
+        # Bảng chi tiết
         st.subheader("📋 Danh sách Task chi tiết")
         display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
         if t_col: display_cols.append(t_col)
