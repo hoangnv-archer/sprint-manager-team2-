@@ -51,7 +51,7 @@ try:
         df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
         
         # Danh sách PIC của team mới
-        valid_pics = ['Người A', 'Người B', 'Người C'] # Thay tên thành viên team mới
+        valid_pics = ['Chuân', 'Việt', 'Thắng'] # Thay tên thành viên team mới
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
         # Logic cảnh báo
