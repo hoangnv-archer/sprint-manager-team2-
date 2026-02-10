@@ -2,3 +2,4 @@ pandas
 st-gsheets-connection
 plotly
 requests
+streamlit-autorefresh
