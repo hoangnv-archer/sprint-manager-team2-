@@ -115,8 +115,8 @@ try:
         st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
 
         # 4. GỬI TELEGRAM TRÊN SIDEBAR
-       if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
-    # 1. Khởi tạo tiêu đề tin nhắn
+if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
+        # 1. Khởi tạo tiêu đề tin nhắn
             msg = "📊 *TEAM 2 REPORT* \n" + "━" * 15 + "\n"
             
             # 2. Thống kê tiến độ từng PIC
