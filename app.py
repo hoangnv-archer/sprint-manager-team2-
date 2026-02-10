@@ -77,3 +77,54 @@ try:
 
         # --- 3. KHÔI PHỤC TOÀN BỘ GIAO DIỆN METRICS ---
         pic_stats = df_team.groupby('PIC').agg(
+            total=('Userstory/Todo', 'count'),
+            done=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
+            doing=('State_Clean', lambda x: x.str.contains('progress').sum()),
+            est_sum=('Estimate Dev', 'sum'),
+            real_sum=('Real', 'sum')
+        ).reset_index()
+        pic_stats['pending'] = pic_stats['total'] - pic_stats['done']
+        pic_stats['percent'] = (pic_stats['done'] / pic_stats['total'] * 100).fillna(0).round(1)
+
+        st.subheader("👤 Trạng thái chi tiết PIC")
+        cols = st.columns(min(len(pic_stats), 5))
+        for i, row in pic_stats.iterrows():
+            with cols[i % 5]:
+                st.markdown(f"### **{row['PIC']}**")
+                st.metric("Hoàn thành", f"{row['percent']}%")
+                st.write(f"✅ Xong: {int(row['done'])} | 🚧 Đang làm: {int(row['doing'])}")
+                st.write(f"⏳ **Tồn đọng: {int(row['pending'])} task**")
+                st.progress(min(row['percent']/100, 1.0))
+                st.divider()
+
+        # BIỂU ĐỒ (UI cũ)
+        st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
+
+        # 4. GỬI TELEGRAM TRÊN SIDEBAR
+        st.sidebar.subheader("📢 Telegram Notification")
+        tg_token = st.sidebar.text_input("Bot Token:", type="password")
+        tg_chat_id = st.sidebar.text_input("Chat ID:")
+        
+        if st.sidebar.button("📤 Gửi báo cáo Telegram"):
+            if tg_token and tg_chat_id:
+                msg = "📊 *TEAM 2 SPRINT REPORT*\n" + "━" * 15 + "\n"
+                for _, r in pic_stats.iterrows():
+                    msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
+                if over_est_list:
+                    msg += "\n🚨 *CẢNH BÁO LỐ GIỜ:*\n"
+                    for item in over_est_list:
+                        msg += f"🔥 `{item['PIC']}` lố: {item['Task']} ({item['Thực tế']}/{item['Dự kiến']})\n"
+                
+                send_telegram_msg(tg_token, tg_chat_id, msg)
+                st.sidebar.success("Đã gửi báo cáo!")
+
+        # 5. BẢNG CHI TIẾT (UI cũ)
+        st.subheader("📋 Danh sách Task chi tiết")
+        display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
+        if t_col: display_cols.append(t_col)
+        st.dataframe(df_team[display_cols], use_container_width=True)
+
+    else:
+        st.error("Không tìm thấy hàng chứa 'Userstory/Todo'.")
+except Exception as e:
+    st.error(f"Lỗi: {e}")
