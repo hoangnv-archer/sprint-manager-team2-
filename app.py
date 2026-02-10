@@ -21,16 +21,7 @@ TG_CHAT_ID = "-1002102856307"
 TG_TOPIC_ID = 18251
 
 # Avatar cho từng thành viên (Thay link ảnh thật của bạn vào đây)
-PIC_AVATARS = {
-    "Chuân": "https://cdn-icons-png.flaticon.com/512/6840/6840478.png",
-    "Việt": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-    "Thắng": "https://cdn-icons-png.flaticon.com/512/2202/2202112.png",
-    "QA": "https://cdn-icons-png.flaticon.com/512/4439/4439197.png",
-    "Mai": "https://cdn-icons-png.flaticon.com/512/6997/6997662.png",
-    "Hải Anh": "https://cdn-icons-png.flaticon.com/512/4140/4140047.png",
-    "Thuật": "https://cdn-icons-png.flaticon.com/512/236/236832.png",
-    "Hiếu": "https://cdn-icons-png.flaticon.com/512/3048/3048122.png"
-}
+
 
 # --- 2. CÁC HÀM HỖ TRỢ ---
 def get_actual_hours(start_val):
@@ -66,7 +57,10 @@ def build_report(stats_df, alerts_list, is_auto=False):
     prefix = "🤖 *AUTO REPORT*" if is_auto else "📊 *MANUAL REPORT*"
     msg = f"{prefix} ({now_str})\n"
     msg += "━━━━━━━━━━━━━━━━━━\n\n"
-    
+
+    PIC_EMOJIS = {
+        "Chuân": "👨‍💻", "Việt": "👨‍🎨", "Thắng": "🚀", "QA": "🔍",
+        "Mai": "👩‍💻", "Hải Anh": "✨", "Thuật": "⚙️", "Hiếu": "🛠️"}
     for _, r in stats_df.iterrows():
         avatar = PIC_AVATARS.get(r['PIC'], "https://cdn-icons-png.flaticon.com/512/847/847969.png")
         msg += f"[🖼️]({avatar}) *{r['PIC']}*\n"
