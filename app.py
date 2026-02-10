@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 # --- 1. CẤU HÌNH HỆ THỐNG ---
 VN_TZ = timezone(timedelta(hours=7))
 # Tự động refresh mỗi 30 giây để kiểm tra giờ gửi cố định
-st_autorefresh(interval=30000, key="tele_report_check")
+st_autorefresh(interval=300000, key="tele_report_check")
 
 # Danh sách giờ gửi báo cáo tự động
 SCHEDULED_HOURS = ["8:30"]
