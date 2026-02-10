@@ -110,23 +110,37 @@ try:
         st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
 
         # 4. GỬI TELEGRAM (Đã thụt lề vào trong khối header_idx)
+        # 4. GỬI TELEGRAM (Nội dung đầy đủ như bảng Metrics)
         st.sidebar.subheader("📢 Telegram Report")
-        if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
-            msg = f"📊 *TEAM 2 REPORT - {datetime.now(VN_TZ).strftime('%d/%m %H:%M')}*\n" + "━" * 15 + "\n"
+        if st.sidebar.button("📤 Gửi báo cáo chi tiết vào Topic"):
+            # 1. Khởi tạo tiêu đề với thời gian thực
+            now_str = datetime.now(VN_TZ).strftime('%d/%m %H:%M')
+            msg = f"📊 *TEAM 2 SPRINT REPORT ({now_str})*\n"
+            msg += "━━━━━━━━━━━━━━━━━━\n\n"
+            
+            # 2. Vòng lặp lấy toàn bộ chỉ số từ pic_stats
             for _, r in pic_stats.iterrows():
-                msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
+                msg += f"👤 *{r['PIC']}*\n"
+                msg += f"┣ Tiến độ: `{r['percent']}%` \n"
+                msg += f"┣ ✅ Xong: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
+                msg += f"┣ ⏳ *Tồn đọng: {int(r['pending'])} task*\n"
+                msg += f"┗ ⏱ Giờ: {round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h (Real/Est)\n"
+                msg += "──────────────────\n"
             
+            # 3. Thêm phần cảnh báo lố giờ nếu có
             if over_est_list:
-                msg += "\n🚨 *CẢNH BÁO LỐ GIỜ:*\n"
+                msg += "\n🚨 *CẢNH BÁO VƯỢT GIỜ DỰ KIẾN:*\n"
                 for item in over_est_list:
-                    msg += f"🔥 `{item['PIC']}`: {item['Task']} ({item['Thực tế']}/{item['Dự kiến']})\n"
+                    msg += f"🔥 `{item['PIC']}`: {item['Task']}\n"
+                    msg += f"   └ Thực tế: {item['Thực tế']} (Dự kiến: {item['Dự kiến']})\n"
             
+            # 4. Thực hiện gửi
             res = send_telegram_msg(msg)
+            
             if res.get("ok"):
-                st.sidebar.success(f"Đã gửi vào Topic ID: {TG_TOPIC_ID}")
+                st.sidebar.success(f"Đã gửi báo cáo chi tiết vào Topic {TG_TOPIC_ID}!")
             else:
                 st.sidebar.error(f"Lỗi: {res.get('description')}")
-
         # 5. BẢNG CHI TIẾT
         st.subheader("📋 Danh sách Task chi tiết")
         display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
