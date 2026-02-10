@@ -31,7 +31,7 @@ st.set_page_config(page_title="Sprint Dashboard Team 2", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- THAY LINK GOOGLE SHEETS CỦA TEAM MỚI TẠI ĐÂY ---
-URL_TEAM_2 = "LINK_GOOGLE_SHEET_TEAM_MOI_CUA_BAN"
+URL_TEAM_2 = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
     df_raw = conn.read(spreadsheet=URL_TEAM_2, header=None, ttl=0)
