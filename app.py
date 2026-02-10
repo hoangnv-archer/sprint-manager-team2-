@@ -21,10 +21,21 @@ def get_actual_hours(start_val):
     except:
         return 0
 
-def send_telegram_msg(token, chat_id, message):
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-    return requests.post(url, json=payload)
+TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
+TG_CHAT_ID = "-1002102856307"  # Đảm bảo có dấu trừ nếu là Group
+
+def send_telegram_msg(message):
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TG_CHAT_ID, 
+        "text": message, 
+        "parse_mode": "Markdown"
+    }
+    try:
+        response = requests.post(url, json=payload)
+        return response.json()
+    except Exception as e:
+        return {"ok": False, "description": str(e)}
 
 st.set_page_config(page_title="Team 2 Sprint Dashboard", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -106,17 +117,12 @@ try:
         tg_chat_id = st.sidebar.text_input("Chat ID:")
         
         if st.sidebar.button("📤 Gửi báo cáo Telegram"):
-            if tg_token and tg_chat_id:
-                msg = "📊 *TEAM 2 SPRINT REPORT*\n" + "━" * 15 + "\n"
-                for _, r in pic_stats.iterrows():
-                    msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
-                if over_est_list:
-                    msg += "\n🚨 *CẢNH BÁO LỐ GIỜ:*\n"
-                    for item in over_est_list:
-                        msg += f"🔥 `{item['PIC']}` lố: {item['Task']} ({item['Thực tế']}/{item['Dự kiến']})\n"
-                
-                send_telegram_msg(tg_token, tg_chat_id, msg)
-                st.sidebar.success("Đã gửi báo cáo!")
+                msg = "📊 *TEAM 2 REPORT*\n..."
+                res = send_telegram_msg(msg)
+                if res.get("ok"):
+                    st.sidebar.success("Đã gửi thành công!")
+                else:
+                    st.sidebar.error(f"Lỗi: {res.get('description')}")
 
         # 5. BẢNG CHI TIẾT (UI cũ)
         st.subheader("📋 Danh sách Task chi tiết")
