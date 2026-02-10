@@ -56,8 +56,8 @@ def build_report(stats_df, alerts_list, is_auto=False):
 
     # Emoji bổ trợ cho từng người (Gọn gàng thay cho Avatar)
     PIC_EMOJIS = {
-        "Chuân": "👨‍💻", "Việt": "👨‍🎨", "Thắng": "🚀", "QA": "🔍",
-        "Mai": "👩‍💻", "Hải Anh": "✨", "Thuật": "⚙️", "Hiếu": "🛠️"
+        "Chuân": "👨‍💻", "Việt": "👽", "Thắng": "🚀", "QA": "🔍",
+        "Mai": "👩🏼‍🎨", "Hải Anh": "✨", "Thuật": "🕺🏼", "Hiếu": "💃🏼"
     }
 
     for _, r in stats_df.iterrows():
