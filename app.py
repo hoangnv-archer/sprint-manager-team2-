@@ -6,10 +6,10 @@ import requests
 from datetime import datetime, timezone, timedelta
 from streamlit_autorefresh import st_autorefresh
 
-# --- 1. CẤU HÌNH HỆ THỐNG ---
+# --- 1. CỐ ĐỊNH MÚI GIỜ VIỆT NAM ---
 VN_TZ = timezone(timedelta(hours=7))
 
-# Tự động refresh mỗi 30 giây để đảm bảo không lỡ khung giờ gửi
+# Tự động refresh mỗi 30 giây để kiểm tra giờ gửi cố định
 st_autorefresh(interval=30000, key="tele_report_check")
 
 # Danh sách giờ gửi báo cáo tự động (Định dạng HH:MM)
@@ -71,10 +71,11 @@ def build_report(pic_stats, over_est_list, is_auto=False):
 
 # --- 3. GIAO DIỆN & XỬ LÝ DỮ LIỆU ---
 st.set_page_config(page_title="Team 2 Sprint Dashboard", layout="wide")
-conn = st.connection("gsheets", type=GSheetsConnection)
-URL_TEAM_2 = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
 
 try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    URL_TEAM_2 = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
+
     df_raw = conn.read(spreadsheet=URL_TEAM_2, header=None, ttl=0)
     header_idx = next((i for i, row in df_raw.iterrows() if "Userstory/Todo" in row.values), None)
             
@@ -144,7 +145,7 @@ try:
             if res.get("ok"): st.sidebar.success("Đã gửi thủ công!")
             else: st.sidebar.error(f"Lỗi: {res.get('description')}")
 
-        # --- LOGIC TỰ ĐỘNG GỬI CẢI TIẾN ---
+        # --- LOGIC TỰ ĐỘNG GỬI ---
         now = datetime.now(VN_TZ)
         today_date = now.strftime("%Y-%m-%d")
         
@@ -154,5 +155,3 @@ try:
         for scheduled_time in SCHEDULED_HOURS:
             sched_h, sched_m = map(int, scheduled_time.split(":"))
             sched_dt = now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
-            
-            # Khóa duy nhất cho mỗi
