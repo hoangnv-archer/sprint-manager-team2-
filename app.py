@@ -9,15 +9,16 @@ from datetime import datetime, timezone, timedelta
 VN_TZ = timezone(timedelta(hours=7))
 
 def get_actual_hours(start_val):
-    if pd.isna(start_val) or str(start_val).strip().lower() in ['none', '', 'nat']:
+    if pd.isna(start_val) or str(start_val).strip().lower() in ['none', '']:
         return 0
     try:
+        # Ép kiểu datetime cho định dạng 2026-09-02 16:14:09
         start_dt = pd.to_datetime(start_val)
         if start_dt.tzinfo is None:
             start_dt = start_dt.replace(tzinfo=VN_TZ)
         now_vn = datetime.now(VN_TZ)
         diff = now_vn - start_dt
-        return diff.total_seconds() / 3600 
+        return max(0, diff.total_seconds() / 3600)
     except:
         return 0
 
@@ -114,18 +115,30 @@ try:
         st.plotly_chart(px.bar(pic_stats, x='PIC', y=['est_sum', 'real_sum'], barmode='group', title="Estimate vs Real (h)"), use_container_width=True)
 
         # 4. GỬI TELEGRAM TRÊN SIDEBAR
-        st.sidebar.subheader("📢 Telegram Notification")
-        tg_token = st.sidebar.text_input("Bot Token:", type="password")
-        tg_chat_id = st.sidebar.text_input("Chat ID:")
+       if st.sidebar.button("📤 Gửi báo cáo vào Topic"):
+    # 1. Khởi tạo tiêu đề tin nhắn
+            msg = "📊 *TEAM 2 REPORT* \n" + "━" * 15 + "\n"
+            
+            # 2. Thống kê tiến độ từng PIC
+            if not pic_stats.empty:
+                for _, r in pic_stats.iterrows():
+                    msg += f"👤 *{r['PIC']}*: `{r['percent']}%` (Tồn: {int(r['pending'])})\n"
+            else:
+                msg += "⚠️ Không có dữ liệu PIC.\n"
         
-        if st.sidebar.button("📤 Gửi báo cáo Telegram"):
-                msg = "📊 *TEAM 2 REPORT*\n..."
-                res = send_telegram_msg(msg)
-                if res.get("ok"):
-                    st.sidebar.success("Đã gửi thành công!")
-                else:
-                    st.sidebar.error(f"Lỗi: {res.get('description')}")
-
+            # 3. Thống kê lố giờ (Bắt lỗi 16:14 so với 16:45)
+            if over_est_list:
+                msg += "\n🚨 *CẢNH BÁO LỐ GIỜ:*\n"
+                for item in over_est_list:
+                    msg += f"🔥 `{item['PIC']}`: {item['Task']} ({item['Thực tế']}/{item['Dự kiến']})\n"
+            
+            # 4. Thực hiện gửi
+            res = send_telegram_msg(msg)
+            
+            if res.get("ok"):
+                st.sidebar.success(f"Đã gửi vào Topic ID: {TG_TOPIC_ID}")
+            else:
+                st.sidebar.error(f"Lỗi Telegram: {res.get('description')}")
         # 5. BẢNG CHI TIẾT (UI cũ)
         st.subheader("📋 Danh sách Task chi tiết")
         display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
