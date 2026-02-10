@@ -9,7 +9,7 @@ from streamlit_autorefresh import st_autorefresh
 # --- 1. CẤU HÌNH HỆ THỐNG ---
 VN_TZ = timezone(timedelta(hours=7))
 
-# Tự động refresh mỗi 30 giây để kiểm tra giờ gửi cố định
+# Tự động refresh mỗi 30 giây để đảm bảo không lỡ khung giờ gửi
 st_autorefresh(interval=30000, key="tele_report_check")
 
 # Danh sách giờ gửi báo cáo tự động (Định dạng HH:MM)
@@ -94,7 +94,6 @@ try:
         valid_pics = ['Chuân', 'Việt', 'Thắng', 'QA', 'Mai', 'Hải Anh', 'Thuật', 'Hiếu']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
-        # Logic lố giờ
         over_est_list = []
         if t_col:
             for _, row in df_team.iterrows():
@@ -107,7 +106,6 @@ try:
                             "Thực tế": f"{round(actual_h * 60)}p", "Dự kiến": f"{round(est_h * 60)}p"
                         })
 
-        # Thống kê PIC
         pic_stats = df_team.groupby('PIC').agg(
             total=('Userstory/Todo', 'count'),
             done=('State_Clean', lambda x: x.isin(['done', 'cancel', 'dev done']).sum()),
@@ -118,7 +116,6 @@ try:
         pic_stats['pending'] = pic_stats['total'] - pic_stats['done']
         pic_stats['percent'] = (pic_stats['done'] / pic_stats['total'] * 100).fillna(0).round(1)
 
-        # --- HIỂN THỊ DASHBOARD ---
         st.title("📊 Team 2 Sprint Performance")
         
         if over_est_list:
@@ -131,8 +128,8 @@ try:
             with m_cols[i % 5]:
                 st.markdown(f"### **{row['PIC']}**")
                 st.metric("Hoàn thành", f"{row['percent']}%")
-                st.write(f"✅ Số task đã hoàn thành: {int(row['done'])} | 🚧 Số task đang tiến hành: {int(row['doing'])}")
-                st.write(f"⏳ **Số task còn tồn đọng: {int(row['pending'])} task**")
+                st.write(f"✅ Xong: {int(row['done'])} | 🚧 Đang: {int(row['doing'])}")
+                st.write(f"⏳ **Tồn: {int(row['pending'])} task**")
                 st.progress(min(row['percent']/100, 1.0))
                 st.divider()
 
@@ -141,32 +138,21 @@ try:
         # --- XỬ LÝ GỬI TIN NHẮN ---
         st.sidebar.subheader("📢 Telegram Report")
         
-        # 1. Nút bấm thủ công
         if st.sidebar.button("📤 Gửi báo cáo ngay bây giờ"):
             content = build_report(pic_stats, over_est_list, is_auto=False)
             res = send_telegram_msg(content)
             if res.get("ok"): st.sidebar.success("Đã gửi thủ công!")
             else: st.sidebar.error(f"Lỗi: {res.get('description')}")
 
-        # 2. Logic tự động gửi theo giờ cố định
-        now_time = datetime.now(VN_TZ).strftime("%H:%M")
-        if "last_sent_time" not in st.session_state:
-            st.session_state.last_sent_time = ""
+        # --- LOGIC TỰ ĐỘNG GỬI CẢI TIẾN ---
+        now = datetime.now(VN_TZ)
+        today_date = now.strftime("%Y-%m-%d")
+        
+        if "sent_log" not in st.session_state:
+            st.session_state.sent_log = []
 
-        if now_time in SCHEDULED_HOURS and st.session_state.last_sent_time != now_time:
-            auto_content = build_report(pic_stats, over_est_list, is_auto=True)
-            res = send_telegram_msg(auto_content)
-            if res.get("ok"):
-                st.session_state.last_sent_time = now_time
-                st.sidebar.info(f"Đã tự động gửi báo cáo lúc {now_time}")
-
-        # Bảng chi tiết
-        st.subheader("📋 Danh sách Task chi tiết")
-        display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
-        if t_col: display_cols.append(t_col)
-        st.dataframe(df_team[display_cols], use_container_width=True)
-
-    else:
-        st.error("Không tìm thấy hàng chứa 'Userstory/Todo'.")
-except Exception as e:
-    st.error(f"Lỗi hệ thống: {e}")
+        for scheduled_time in SCHEDULED_HOURS:
+            sched_h, sched_m = map(int, scheduled_time.split(":"))
+            sched_dt = now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
+            
+            # Khóa duy nhất cho mỗi
