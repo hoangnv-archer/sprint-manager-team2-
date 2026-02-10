@@ -88,7 +88,7 @@ try:
         # --- 3. THỐNG KÊ PIC ---
         pic_stats = df_team.groupby('PIC').agg(
             total=('Userstory/Todo', 'count'),
-            done=('State_Clean', lambda x: x.isin(['done', 'cancel']).sum()),
+            done=('State_Clean', lambda x: x.isin(['done', 'cancel', 'dev done']).sum()),
             doing=('State_Clean', lambda x: x.str.contains('progress').sum()),
             est_sum=('Estimate Dev', 'sum'),
             real_sum=('Real', 'sum')
@@ -122,7 +122,7 @@ try:
             for _, r in pic_stats.iterrows():
                 msg += f"👤 *{r['PIC']}*\n"
                 msg += f"┣ Tiến độ: `{r['percent']}%` \n"
-                msg += f"┣ ✅ Xong: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
+                msg += f"┣ ✅ Đã hoàn thành: {int(r['done'])} | 🚧 Đang làm: {int(r['doing'])}\n"
                 msg += f"┣ ⏳ *Tồn đọng: {int(r['pending'])} task*\n"
                 msg += f"┗ ⏱ Giờ: {round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h (Real/Est)\n"
                 msg += "──────────────────\n"
