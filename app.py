@@ -24,7 +24,7 @@ def get_actual_hours(start_val):
 
 st.set_page_config(page_title="Sprint Dashboard Final", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
-URL = "https://docs.google.com/spreadsheets/d/1llUlTDfR413oZelu-AoMsC0lEzHqXOkB4SCwc_4zmAo/edit?pli=1&gid=982443592#gid=982443592"
+URL = "https://docs.google.com/spreadsheets/d/1hentY_r7GNVwJWM3wLT7LsA3PrXQidWnYahkfSwR9Kw/edit?pli=1&gid=982443592#gid=982443592"
 
 # --- LẤY DỮ LIỆU TƯƠI (TTL=0 ĐỂ KHÔNG DÙNG CACHE) ---
 try:
@@ -52,7 +52,7 @@ try:
         t_col = next((c for c in df.columns if "start" in c.lower()), None)
         
         df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
-        valid_pics = ['Tài', 'Dương', 'QA', 'Quân', 'Phú', 'Thịnh', 'Đô', 'Tùng', 'Anim', 'Thắng VFX']
+        valid_pics = ['Chuân', 'Việt', 'QA', 'Thắng', 'Mai', 'Hải Anh', 'Hiếu', 'Thuật']
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
         # --- 2. LOGIC CẢNH BÁO LỐ GIỜ ---
