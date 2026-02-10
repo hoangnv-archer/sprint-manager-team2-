@@ -155,3 +155,23 @@ try:
         for scheduled_time in SCHEDULED_HOURS:
             sched_h, sched_m = map(int, scheduled_time.split(":"))
             sched_dt = now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
+            log_key = f"{today_date}_{scheduled_time}"
+            
+            if sched_dt <= now <= (sched_dt + timedelta(minutes=10)):
+                if log_key not in st.session_state.sent_log:
+                    auto_content = build_report(pic_stats, over_est_list, is_auto=True)
+                    res = send_telegram_msg(auto_content)
+                    if res.get("ok"):
+                        st.session_state.sent_log.append(log_key)
+                        st.sidebar.info(f"Đã gửi báo cáo tự động mốc {scheduled_time}")
+
+        st.subheader("📋 Danh sách Task chi tiết")
+        display_cols = ['Userstory/Todo', 'State', 'PIC', 'Estimate Dev', 'Real']
+        if t_col: display_cols.append(t_col)
+        st.dataframe(df_team[display_cols], use_container_width=True)
+
+    else:
+        st.error("Không tìm thấy hàng chứa 'Userstory/Todo'.")
+
+except Exception as e:
+    st.error(f"Lỗi hệ thống: {e}")
