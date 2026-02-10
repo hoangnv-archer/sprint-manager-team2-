@@ -65,7 +65,7 @@ try:
         df['State_Clean'] = df['State'].fillna('None').str.strip().str.lower()
         
         # --- CẬP NHẬT DANH SÁCH PIC CHO TEAM 2 ---
-        valid_pics = ['Chuân', 'Việt', 'Thắng'] # Thay bằng tên PIC thực tế của Team 2
+        valid_pics = ['Chuân', 'Việt', 'Thắng', 'QA', 'Mai', 'Hải Anh', 'Thuật', 'Hiếu'] # Thay bằng tên PIC thực tế của Team 2
         df_team = df[df['PIC'].isin(valid_pics)].copy()
 
         # 2. LOGIC CẢNH BÁO LỐ GIỜ
