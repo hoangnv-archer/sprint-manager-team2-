@@ -53,8 +53,9 @@ def run_job():
         msg += "━━━━━━━━━━━━━━━━━━\n\n"
         
          PIC_EMOJIS = {
-        "Chuân": "🔧", "Việt": "💊", "Thắng": "✏️", "QA": "🐞",
-        "Mai": "🌟", "Hải Anh": "✨", "Thuật": "👾", "Hiếu": "🤖"}
+            "Chuân": "🔧", "Việt": "💊", "Thắng": "✏️", "QA": "🐞",
+            "Mai": "🌟", "Hải Anh": "✨", "Thuật": "👾", "Hiếu": "🤖"
+             }
 
         for _, r in pic_stats.iterrows():
             emoji = PIC_EMOJIS.get(r['PIC'], "👤")
