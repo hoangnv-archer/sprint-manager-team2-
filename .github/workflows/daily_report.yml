@@ -2,9 +2,9 @@ name: Auto Send Telegram Report
 
 on:
   schedule:
-    # 15:30 VN (8:30 UTC)
+    # 8:30 VN = 1:30 UTC
     - cron: '30 23 * * *'
-  workflow_dispatch: # Nút này để bạn bấm chạy thử ngay lập tức trên GitHub
+  workflow_dispatch:
 
 jobs:
   build:
