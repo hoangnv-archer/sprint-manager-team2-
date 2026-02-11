@@ -1,28 +1,26 @@
-name: Daily Sprint Report
+name: Auto Send Telegram Report
+
 on:
   schedule:
-    - cron: '0 19 * * *' # Chạy lúc 10:20 AM giờ VN
-  workflow_dispatch:
+    # 15:30 VN (8:30 UTC)
+    - cron: '30 23 * * *'
+  workflow_dispatch: # Nút này để bạn bấm chạy thử ngay lập tức trên GitHub
 
 jobs:
-  send_report:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
-          pip install pandas requests gspread
-      
-      - name: Run report script
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          GSHEETS_URL: ${{ secrets.GSHEETS_URL }}
-          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-        run: python send_discord_auto.py
+          pip install pandas requests
+
+      - name: Run script
+        run: python send_report.py
