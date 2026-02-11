@@ -11,8 +11,6 @@ VN_TZ = timezone(timedelta(hours=7))
 # Tự động refresh mỗi 30 giây để kiểm tra giờ gửi cố định
 st_autorefresh(interval=300000, key="tele_report_check")
 
-# Danh sách giờ gửi báo cáo tự động
-SCHEDULED_HOURS = ["8:30"]
 
 # Thông tin Telegram
 TG_TOKEN = "8535993887:AAFDNSLk9KRny99kQrAoQRbgpKJx_uHbkpw" 
@@ -155,25 +153,6 @@ try:
             content = build_report(pic_stats, over_est_list, is_auto=False)
             res = send_telegram_msg(content)
             if res.get("ok"): st.sidebar.success("Đã gửi thủ công!")
-
-        # Logic gửi tự động theo giờ
-        now = datetime.now(VN_TZ)
-        today_date = now.strftime("%Y-%m-%d")
-        if "sent_log" not in st.session_state:
-            st.session_state.sent_log = []
-
-        for scheduled_time in SCHEDULED_HOURS:
-            sched_h, sched_m = map(int, scheduled_time.split(":"))
-            sched_dt = now.replace(hour=sched_h, minute=sched_m, second=0, microsecond=0)
-            log_key = f"{today_date}_{scheduled_time}"
-            
-            if sched_dt <= now <= (sched_dt + timedelta(minutes=10)):
-                if log_key not in st.session_state.sent_log:
-                    auto_content = build_report(pic_stats, over_est_list, is_auto=True)
-                    res = send_telegram_msg(auto_content)
-                    if res.get("ok"):
-                        st.session_state.sent_log.append(log_key)
-                        st.sidebar.info(f"Đã gửi tự động mốc {scheduled_time}")
 
         # Bảng dữ liệu chi tiết
         st.subheader("📋 Danh sách Task chi tiết")
