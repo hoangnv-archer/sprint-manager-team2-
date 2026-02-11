@@ -15,15 +15,14 @@ def send_telegram_msg(message):
         "chat_id": TG_CHAT_ID, 
         "message_thread_id": TG_TOPIC_ID, 
         "text": message, 
-        "parse_mode": "Markdown", 
+        "parse_mode": "HTML", # Chuyển sang HTML để tránh lỗi Markdown ký tự đặc biệt
         "disable_web_page_preview": True
     }
     response = requests.post(url, json=payload)
-    # Dòng này sẽ in ra chi tiết lỗi từ Telegram nếu có
     if response.status_code != 200:
-        print(f"Telegram Error: {response.text}")
+        print(f"❌ LỖI TELEGRAM: {response.text}")
     else:
-        print("Message sent successfully to Telegram!")
+        print("✅ TIN NHẮN ĐÃ GỬI THÀNH CÔNG!")
 
 def run_job():
     try:
@@ -49,7 +48,8 @@ def run_job():
         pic_stats['percent'] = (pic_stats['done'] / pic_stats['total'] * 100).fillna(0).round(1)
 
         now_str = datetime.now(VN_TZ).strftime('%d/%m %H:%M')
-        msg = f"🤖 *AUTO REPORT* ({now_str})\n"
+        # Dùng thẻ HTML để thay thế Markdown
+        msg = f"<b>🤖 AUTO REPORT ({now_str})</b>\n"
         msg += "━━━━━━━━━━━━━━━━━━\n\n"
         
         PIC_EMOJIS = {
@@ -59,17 +59,16 @@ def run_job():
 
         for _, r in pic_stats.iterrows():
             emoji = PIC_EMOJIS.get(r['PIC'], "👤")
-            msg += f"{emoji} *{r['PIC']}*\n"
-            msg += f"┣ Tiến độ: **{r['percent']}%** \n"
-            msg += f"┣ ✅ Xong: `{int(r['done'])}` | 🚧 Đang: `{int(r['doing'])}`\n"
-            msg += f"┣ ⏳ *Tồn: {int(r['pending'])} task*\n"
-            msg += f"┗ ⏱ Giờ: `{round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h`\n"
+            msg += f"{emoji} <b>{r['PIC']}</b>\n"
+            msg += f"┣ Tiến độ: <b>{r['percent']}%</b> \n"
+            msg += f"┣ ✅ Xong: {int(r['done'])} | 🚧 Đang: {int(r['doing'])}\n"
+            msg += f"┣ ⏳ <b>Tồn: {int(r['pending'])} task</b>\n"
+            msg += f"┗ ⏱ Giờ: {round(r['real_sum'], 1)}h / {round(r['est_sum'], 1)}h\n"
             msg += "──────────────────\n"
         
         send_telegram_msg(msg)
-        print("Success")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ LỖI HỆ THỐNG: {e}")
 
 if __name__ == "__main__":
     run_job()
