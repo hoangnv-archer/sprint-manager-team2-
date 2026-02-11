@@ -18,7 +18,12 @@ def send_telegram_msg(message):
         "parse_mode": "Markdown", 
         "disable_web_page_preview": True
     }
-    requests.post(url, json=payload)
+    response = requests.post(url, json=payload)
+    # Dòng này sẽ in ra chi tiết lỗi từ Telegram nếu có
+    if response.status_code != 200:
+        print(f"Telegram Error: {response.text}")
+    else:
+        print("Message sent successfully to Telegram!")
 
 def run_job():
     try:
