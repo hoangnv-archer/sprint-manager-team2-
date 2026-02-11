@@ -26,9 +26,27 @@ def send_telegram_msg(message):
 
 def run_job():
     try:
-        df = pd.read_csv(SHEET_URL)
-        df.columns = [str(c).strip() for c in df.columns]
+        df_raw = pd.read_csv(SHEET_URL, header=None)
         
+        # Tìm hàng chứa tiêu đề "Userstory/Todo"
+        header_row_idx = None
+        for i, row in df_raw.iterrows():
+            if "Userstory/Todo" in row.values:
+                header_row_idx = i
+                break
+        
+        if header_row_idx is None:
+            print("❌ LỖI: Không tìm thấy cột 'Userstory/Todo' trong Sheet")
+            return
+        df = pd.read_csv(SHEET_URL, skiprows=header_row_idx)
+        df.columns = [str(c).strip() for c in df.columns]
+        state_col = next((c for c in df.columns if "state" in c.lower()), None)
+        pic_col = next((c for c in df.columns if "pic" in c.lower()), None)
+        task_col = "Userstory/Todo"
+
+        if not state_col or not pic_col:
+            print(f"❌ LỖI: Không tìm thấy cột State hoặc PIC. Các cột hiện có: {list(df.columns)}")
+            return
         for col in ['Estimate Dev', 'Real']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.'), errors='coerce').fillna(0)
