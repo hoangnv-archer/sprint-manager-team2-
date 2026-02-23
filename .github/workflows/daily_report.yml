@@ -1,4 +1,4 @@
-/////////name: Auto Send Telegram Report
+name: Auto Send Telegram Report
 
 on:
   schedule:
